@@ -18,6 +18,8 @@ readonly NULL_MAC="00:00:00:00:00:00"
 readonly VALID_MAC="02:01:02:03:04:05"
 readonly V6_ALL_NODE_MAC="33:33:FF:00:00:01"
 readonly V6_SOL_NODE_MAC1="33:33:FF:00:00:02"
+readonly NS=135
+readonly NA=136
 readonly ARP_REQ=1
 readonly ARP_REPLY=2
 nsid=100
@@ -108,7 +110,7 @@ run_no_ndp_poisoning() {
 	local tip=${V6_ADDR0}
 	local tmac=${4}
 
-	if [ "${op}" == "ns" ]; then
+	if [ "${op}" == "${NS}" ]; then
 		tip=${V6_ADDR1}
 	fi
 
@@ -118,8 +120,8 @@ run_no_ndp_poisoning() {
 	ip netns exec ${PEER_NS} ping -c 1 ${V6_ADDR0} >/dev/null 2>&1
 
 	# Poison with a valid MAC to ensure injection is working
-	python3 ndp_send.py veth0 ${l2_dmac} ${VALID_MAC} ${dst_ip} ${V6_ADDR0}\
-		${tip} ${op} ${VALID_MAC}
+	./ndisc_send ${veth0_ifindex} ${l2_dmac} ${VALID_MAC} ${dst_ip} \
+		${V6_ADDR0} ${tip} ${op} ${VALID_MAC}
 	neigh=$(ip netns exec ${PEER_NS} ip neigh show ${V6_ADDR0} | \
 		grep ${VALID_MAC})
 	if [ "${neigh}" == "" ]; then
@@ -130,8 +132,8 @@ run_no_ndp_poisoning() {
 	fi
 
 	# Poison with tmac
-	python3 ndp_send.py veth0 ${l2_dmac} ${VALID_MAC} ${dst_ip} ${V6_ADDR0}\
-		${tip} ${op} ${tmac}
+	./ndisc_send ${veth0_ifindex} ${l2_dmac} ${VALID_MAC} ${dst_ip} \
+		${V6_ADDR0} ${tip} ${op} ${tmac}
 	neigh=$(ip netns exec ${PEER_NS} ip neigh show ${V6_ADDR0} | \
 		grep ${tmac})
 	if [ "${neigh}" != "" ]; then
@@ -199,121 +201,121 @@ run_all_tests() {
 	## NA
 	# Broadcast / All node MAC, all-node IP announcements
 	msg="2.1  NDP no poisoning dmac=bcast   all_nodes na lladdr=bcast"
-	run_no_ndp_poisoning ${BCAST_MAC} ${V6_ALL_NODES} na ${BCAST_MAC}
+	run_no_ndp_poisoning ${BCAST_MAC} ${V6_ALL_NODES} ${NA} ${BCAST_MAC}
 	results+="$(print_test_result "${msg}" ${ret})\n"
 
 	msg="2.2  NDP no poisoning dmac=bcast   all_nodes na lladdr=null"
-	run_no_ndp_poisoning ${BCAST_MAC} ${V6_ALL_NODES} na ${NULL_MAC}
+	run_no_ndp_poisoning ${BCAST_MAC} ${V6_ALL_NODES} ${NA} ${NULL_MAC}
 	results+="$(print_test_result "${msg}" ${ret})\n"
 
 	msg="2.3  NDP no poisoning dmac=allnode all_nodes na lladdr=bcast"
-	run_no_ndp_poisoning ${V6_ALL_NODE_MAC} ${V6_ALL_NODES} na ${BCAST_MAC}
+	run_no_ndp_poisoning ${V6_ALL_NODE_MAC} ${V6_ALL_NODES} ${NA} ${BCAST_MAC}
 	results+="$(print_test_result "${msg}" ${ret})\n"
 
 	msg="2.4  NDP no poisoning dmac=allnode all_nodes na lladdr=null"
-	run_no_ndp_poisoning ${V6_ALL_NODE_MAC} ${V6_ALL_NODES} na ${NULL_MAC}
+	run_no_ndp_poisoning ${V6_ALL_NODE_MAC} ${V6_ALL_NODES} ${NA} ${NULL_MAC}
 	results+="$(print_test_result "${msg}" ${ret})\n"
 
 	msg="2.5  NDP no poisoning dmac=bcast   all_nodes na lladdr=bcast"
-	run_no_ndp_poisoning ${BCAST_MAC} ${V6_ALL_NODES} na ${BCAST_MAC}
+	run_no_ndp_poisoning ${BCAST_MAC} ${V6_ALL_NODES} ${NA} ${BCAST_MAC}
 	results+="$(print_test_result "${msg}" ${ret})\n"
 
 	msg="2.6  NDP no poisoning dmac=bcast   all_nodes na lladdr=null"
-	run_no_ndp_poisoning ${BCAST_MAC} ${V6_ALL_NODES} na ${NULL_MAC}
+	run_no_ndp_poisoning ${BCAST_MAC} ${V6_ALL_NODES} ${NA} ${NULL_MAC}
 	results+="$(print_test_result "${msg}" ${ret})\n"
 
 	msg="2.7  NDP no poisoning dmac=allnode all_nodes na lladdr=bcast"
-	run_no_ndp_poisoning ${V6_ALL_NODE_MAC} ${V6_ALL_NODES} na ${BCAST_MAC}
+	run_no_ndp_poisoning ${V6_ALL_NODE_MAC} ${V6_ALL_NODES} ${NA} ${BCAST_MAC}
 	results+="$(print_test_result "${msg}" ${ret})\n"
 
 	msg="2.8  NDP no poisoning dmac=allnode all_nodes na lladdr=null"
-	run_no_ndp_poisoning ${V6_ALL_NODE_MAC} ${V6_ALL_NODES} na ${NULL_MAC}
+	run_no_ndp_poisoning ${V6_ALL_NODE_MAC} ${V6_ALL_NODES} ${NA} ${NULL_MAC}
 	results+="$(print_test_result "${msg}" ${ret})\n"
 
 	# Broadcast / All node MAC, Targeted IP announce
 	msg="2.9  NDP no poisoning dmac=bcast   targeted  na lladdr=bcast"
-	run_no_ndp_poisoning ${BCAST_MAC} ${V6_ADDR1} na ${BCAST_MAC}
+	run_no_ndp_poisoning ${BCAST_MAC} ${V6_ADDR1} ${NA} ${BCAST_MAC}
 	results+="$(print_test_result "${msg}" ${ret})\n"
 
 	msg="2.10 NDP no poisoning dmac=bcast   targeted  na lladdr=null"
-	run_no_ndp_poisoning ${BCAST_MAC} ${V6_ADDR1} na ${NULL_MAC}
+	run_no_ndp_poisoning ${BCAST_MAC} ${V6_ADDR1} ${NA} ${NULL_MAC}
 	results+="$(print_test_result "${msg}" ${ret})\n"
 
 	msg="2.11 NDP no poisoning dmac=allnode targeted  na lladdr=bcast"
-	run_no_ndp_poisoning ${V6_ALL_NODE_MAC} ${V6_ADDR1} na ${BCAST_MAC}
+	run_no_ndp_poisoning ${V6_ALL_NODE_MAC} ${V6_ADDR1} ${NA} ${BCAST_MAC}
 	results+="$(print_test_result "${msg}" ${ret})\n"
 
 	msg="2.12 NDP no poisoning dmac=allnode targeted  na lladdr=null"
-	run_no_ndp_poisoning ${V6_ALL_NODE_MAC} ${V6_ADDR1} na ${NULL_MAC}
+	run_no_ndp_poisoning ${V6_ALL_NODE_MAC} ${V6_ADDR1} ${NA} ${NULL_MAC}
 	results+="$(print_test_result "${msg}" ${ret})\n"
 
 	msg="2.13 NDP no poisoning dmac=bcast   targeted  na lladdr=bcast"
-	run_no_ndp_poisoning ${BCAST_MAC} ${V6_ADDR1} na ${BCAST_MAC}
+	run_no_ndp_poisoning ${BCAST_MAC} ${V6_ADDR1} ${NA} ${BCAST_MAC}
 	results+="$(print_test_result "${msg}" ${ret})\n"
 
 	msg="2.14 NDP no poisoning dmac=bcast   targeted  na lladdr=null"
-	run_no_ndp_poisoning ${BCAST_MAC} ${V6_ADDR1} na ${NULL_MAC}
+	run_no_ndp_poisoning ${BCAST_MAC} ${V6_ADDR1} ${NA} ${NULL_MAC}
 	results+="$(print_test_result "${msg}" ${ret})\n"
 
 	msg="2.15 NDP no poisoning dmac=allnode targeted  na lladdr=bcast"
-	run_no_ndp_poisoning ${V6_ALL_NODE_MAC} ${V6_ADDR1} na ${BCAST_MAC}
+	run_no_ndp_poisoning ${V6_ALL_NODE_MAC} ${V6_ADDR1} ${NA} ${BCAST_MAC}
 	results+="$(print_test_result "${msg}" ${ret})\n"
 
 	msg="2.16 NDP no poisoning dmac=allnode targeted  na lladdr=null"
-	run_no_ndp_poisoning ${V6_ALL_NODE_MAC} ${V6_ADDR1} na ${NULL_MAC}
+	run_no_ndp_poisoning ${V6_ALL_NODE_MAC} ${V6_ADDR1} ${NA} ${NULL_MAC}
 	results+="$(print_test_result "${msg}" ${ret})\n"
 
 	# Targeted MAC, Targeted IP announce
 	msg="2.17 NDP no poisoning dmac=veth1   targeted  na lladdr=bcast"
-	run_no_ndp_poisoning ${veth1_mac} ${V6_ADDR1} na ${BCAST_MAC}
+	run_no_ndp_poisoning ${veth1_mac} ${V6_ADDR1} ${NA} ${BCAST_MAC}
 	results+="$(print_test_result "${msg}" ${ret})\n"
 
 	msg="2.18 NDP no poisoning dmac=veth1   targeted  na lladdr=null"
-	run_no_ndp_poisoning ${veth1_mac} ${V6_ADDR1} na ${NULL_MAC}
+	run_no_ndp_poisoning ${veth1_mac} ${V6_ADDR1} ${NA} ${NULL_MAC}
 	results+="$(print_test_result "${msg}" ${ret})\n"
 
 	## NS
 	# Broadcast / SolNode node MAC, SolNode IP solic
 	msg="2.19 NDP no poisoning dmac=bcast   solnode   ns lladdr=bcast"
-	run_no_ndp_poisoning ${BCAST_MAC} ${V6_SOL_NODE1} ns ${BCAST_MAC}
+	run_no_ndp_poisoning ${BCAST_MAC} ${V6_SOL_NODE1} ${NS} ${BCAST_MAC}
 	results+="$(print_test_result "${msg}" ${ret})\n"
 
 	msg="2.20 NDP no poisoning dmac=bcast   solnode   ns lladdr=null"
-	run_no_ndp_poisoning ${BCAST_MAC} ${V6_SOL_NODE1} ns ${NULL_MAC}
+	run_no_ndp_poisoning ${BCAST_MAC} ${V6_SOL_NODE1} ${NS} ${NULL_MAC}
 	results+="$(print_test_result "${msg}" ${ret})\n"
 
 	msg="2.19 NDP no poisoning dmac=solnode solnode   ns lladdr=bcast"
-	run_no_ndp_poisoning ${V6_SOL_NODE_MAC1} ${V6_SOL_NODE1} ns ${BCAST_MAC}
+	run_no_ndp_poisoning ${V6_SOL_NODE_MAC1} ${V6_SOL_NODE1} ${NS} ${BCAST_MAC}
 	results+="$(print_test_result "${msg}" ${ret})\n"
 
 	msg="2.20 NDP no poisoning dmac=solnode solnode   ns lladdr=null"
-	run_no_ndp_poisoning ${V6_SOL_NODE_MAC1} ${V6_SOL_NODE1} ns ${NULL_MAC}
+	run_no_ndp_poisoning ${V6_SOL_NODE_MAC1} ${V6_SOL_NODE1} ${NS} ${NULL_MAC}
 	results+="$(print_test_result "${msg}" ${ret})\n"
 
 	# Broadcast / SolNode node MAC, target IP solic
 	msg="2.21 NDP no poisoning dmac=bcast   target    ns lladdr=bcast"
-	run_no_ndp_poisoning ${BCAST_MAC} ${V6_ADDR1} ns ${BCAST_MAC}
+	run_no_ndp_poisoning ${BCAST_MAC} ${V6_ADDR1} ${NS} ${BCAST_MAC}
 	results+="$(print_test_result "${msg}" ${ret})\n"
 
 	msg="2.22 NDP no poisoning dmac=bcast   target    ns lladdr=null"
-	run_no_ndp_poisoning ${BCAST_MAC} ${V6_ADDR1} ns ${NULL_MAC}
+	run_no_ndp_poisoning ${BCAST_MAC} ${V6_ADDR1} ${NS} ${NULL_MAC}
 	results+="$(print_test_result "${msg}" ${ret})\n"
 
 	msg="2.23 NDP no poisoning dmac=solnode target    ns lladdr=bcast"
-	run_no_ndp_poisoning ${V6_SOL_NODE_MAC1} ${V6_ADDR1} ns ${BCAST_MAC}
+	run_no_ndp_poisoning ${V6_SOL_NODE_MAC1} ${V6_ADDR1} ${NS} ${BCAST_MAC}
 	results+="$(print_test_result "${msg}" ${ret})\n"
 
 	msg="2.24 NDP no poisoning dmac=solnode target    ns lladdr=null"
-	run_no_ndp_poisoning ${V6_SOL_NODE_MAC1} ${V6_ADDR1} ns ${NULL_MAC}
+	run_no_ndp_poisoning ${V6_SOL_NODE_MAC1} ${V6_ADDR1} ${NS} ${NULL_MAC}
 	results+="$(print_test_result "${msg}" ${ret})\n"
 
 	# Targeted MAC, Targeted IP solic
 	msg="2.25 NDP no poisoning dmac=veth1   target    ns lladdr=bcast"
-	run_no_ndp_poisoning ${veth1_mac} ${V6_ADDR1} ns ${BCAST_MAC}
+	run_no_ndp_poisoning ${veth1_mac} ${V6_ADDR1} ${NS} ${BCAST_MAC}
 	results+="$(print_test_result "${msg}" ${ret})\n"
 
 	msg="2.26 NDP no poisoning dmac=veth1   target    ns lladdr=null"
-	run_no_ndp_poisoning ${veth1_mac} ${V6_ADDR1} ns ${NULL_MAC}
+	run_no_ndp_poisoning ${veth1_mac} ${V6_ADDR1} ${NS} ${NULL_MAC}
 	results+="$(print_test_result "${msg}" ${ret})\n"
 
 	cleanup
