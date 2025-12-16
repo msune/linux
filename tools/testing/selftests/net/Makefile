@@ -10,8 +10,8 @@ TEST_PROGS := \
 	altnames.sh \
 	amt.sh \
 	arp_ndisc_evict_nocarrier.sh \
+	arp_ndisc_no_invalid_poison.sh \
 	arp_ndisc_untracked_subnets.sh \
-	arp_no_invalid_sha_poison.sh \
 	bareudp.sh \
 	big_tcp.sh \
 	bind_bhash.sh \
@@ -139,6 +139,7 @@ TEST_GEN_FILES := \
 	ipv6_flowlabel \
 	ipv6_flowlabel_mgr \
 	msg_zerocopy \
+	ndisc_send \
 	nettest \
 	psock_fanout \
 	psock_snd \
